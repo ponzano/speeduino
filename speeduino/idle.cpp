@@ -333,8 +333,11 @@ static inline byte checkForStepping(void)
         idleStepper.stepperStatus = SOFF;
         if(configPage9.iacStepperPower == STEPPER_POWER_WHEN_ACTIVE) 
         { 
-          //Disable the DRV8825, but only if we're at the final step in this cycle. 
-          if(idleStepper.targetIdleStep == idleStepper.curIdleStep) { digitalWrite(pinStepperEnable, HIGH); } 
+          //Disable the DRV8825, but only if we're at the final step in this cycle or within the hysteresis range. 
+          if ( (idleStepper.curIdleStep >= (idleStepper.targetIdleStep - configPage6.iacStepHyster)) && (idleStepper.curIdleStep <= (idleStepper.targetIdleStep + configPage6.iacStepHyster))) //Hysteresis check
+          { 
+            digitalWrite(pinStepperEnable, HIGH); 
+          } 
         }
       }
     }
@@ -375,10 +378,10 @@ static inline void doStep(void)
     idleStepper.stepperStatus = STEPPING;
     idleOn = true;
 
-    BIT_SET(currentStatus.spark, BIT_SPARK_IDLE);
+    BIT_SET(currentStatus.status2, BIT_STATUS2_IDLE);
   }
   else
-    BIT_CLEAR(currentStatus.spark, BIT_SPARK_IDLE);
+    BIT_CLEAR(currentStatus.status2, BIT_STATUS2_IDLE);
 }
 
 /*
@@ -442,14 +445,14 @@ void idleControl(void)
       {
         IDLE_PIN_HIGH();
         idleOn = true;
-        BIT_SET(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag on
+        BIT_SET(currentStatus.status2, BIT_STATUS2_IDLE); //Turn the idle control flag on
 		    currentStatus.idleLoad = 100;
       }
       else if (idleOn)
       {
         IDLE_PIN_LOW();
         idleOn = false; 
-        BIT_CLEAR(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag on
+        BIT_CLEAR(currentStatus.status2, BIT_STATUS2_IDLE); //Turn the idle control flag on
 		    currentStatus.idleLoad = 0;
       }
       break;
@@ -662,7 +665,7 @@ void idleControl(void)
         {
           idleStepper.targetIdleStep = configPage9.iacMaxSteps * 3;
         }
-        if( ((uint16_t)configPage9.iacMaxSteps * 3) > 255 ) { currentStatus.idleLoad = idleStepper.curIdleStep / 2; }//Current step count (Divided by 2 for byte)
+        if( ((uint16_t)configPage9.iacMaxSteps * 3) > UINT8_MAX ) { currentStatus.idleLoad = idleStepper.curIdleStep / 2; }//Current step count (Divided by 2 for byte)
         else { currentStatus.idleLoad = idleStepper.curIdleStep; }
         doStep();
       }
@@ -824,7 +827,7 @@ void idleControl(void)
         {
           idleStepper.targetIdleStep = configPage9.iacMaxSteps * 3;
         }
-        if( ( (uint16_t)configPage9.iacMaxSteps * 3) > 255 ) { currentStatus.idleLoad = idleStepper.curIdleStep / 2; }//Current step count (Divided by 2 for byte)
+        if( ( (uint16_t)configPage9.iacMaxSteps * 3) > UINT8_MAX ) { currentStatus.idleLoad = idleStepper.curIdleStep / 2; }//Current step count (Divided by 2 for byte)
         else { currentStatus.idleLoad = idleStepper.curIdleStep; }
         doStep();
       }
@@ -848,7 +851,7 @@ void idleControl(void)
   {
     if(currentStatus.idleLoad >= 100)
     {
-      BIT_SET(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag on
+      BIT_SET(currentStatus.status2, BIT_STATUS2_IDLE); //Turn the idle control flag on
       IDLE_TIMER_DISABLE();
       if (configPage6.iacPWMdir == 0)
       {
@@ -869,7 +872,7 @@ void idleControl(void)
     }
     else
     {
-      BIT_SET(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag on
+      BIT_SET(currentStatus.status2, BIT_STATUS2_IDLE); //Turn the idle control flag on
       IDLE_TIMER_ENABLE();
     }
   }
@@ -915,7 +918,7 @@ void disableIdle(void)
         idle_pid_target_value = idleStepper.targetIdleStep<<2;
     }
   }
-  BIT_CLEAR(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag off
+  BIT_CLEAR(currentStatus.status2, BIT_STATUS2_IDLE); //Turn the idle control flag off
   currentStatus.idleLoad = 0;
 }
 

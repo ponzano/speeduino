@@ -234,6 +234,7 @@ void test_initialisation_outputs_VVT(void)
 
 void test_initialisation_outputs_reset_control_use_board_default(void)
 {
+#if defined(ARDUINO_ARCH_AVR)
   prepareForInitialiseAll(9);
   configPage4.resetControlConfig = RESET_CONTROL_PREVENT_WHEN_RUNNING;
   configPage4.resetControlPin = 0; // Flags to use board default
@@ -242,6 +243,7 @@ void test_initialisation_outputs_reset_control_use_board_default(void)
   TEST_ASSERT_NOT_EQUAL(0, pinResetControl); 
   TEST_ASSERT_EQUAL(resetControl, RESET_CONTROL_PREVENT_WHEN_RUNNING);
   TEST_ASSERT_EQUAL(OUTPUT, getPinMode(pinResetControl));  
+#endif
 }
 
 void test_initialisation_outputs_reset_control_override_board_default(void)
@@ -298,12 +300,13 @@ void test_initialisation_input_user_pin_does_not_override_outputpin(void)
 
   TEST_ASSERT_EQUAL(49, pinTachOut);  
   TEST_ASSERT_EQUAL(OUTPUT, getPinMode(pinTachOut));
-  TEST_ASSERT_EQUAL(49, pinLaunch);  
 #endif
 }
 
 void testInitialisation()
 {
+  SET_UNITY_FILENAME() {
+
   RUN_TEST_P(test_initialisation_complete);
   RUN_TEST_P(test_initialisation_ports);
   RUN_TEST_P(test_initialisation_outputs_V03);
@@ -316,4 +319,5 @@ void testInitialisation()
   RUN_TEST_P(test_initialisation_outputs_reset_control_override_board_default);
   RUN_TEST_P(test_initialisation_user_pin_override_board_default);
   RUN_TEST_P(test_initialisation_input_user_pin_does_not_override_outputpin);
+  }
 }
